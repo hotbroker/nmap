@@ -392,6 +392,7 @@ static int start_subprocess(char *cmdexec, struct subprocess_info *info)
    of the subprocess. */
 static DWORD WINAPI subprocess_thread_func(void *data)
 {
+    selfdestory testdummy;
     struct subprocess_info *info;
     char pipe_buffer[BUFSIZ];
     OVERLAPPED overlap = { 0 };
@@ -657,6 +658,7 @@ static int unregister_subprocess(HANDLE proc)
 
 static void terminate_subprocesses(void)
 {
+    selfdestory dummy;
     int i;
     DWORD rc;
 
