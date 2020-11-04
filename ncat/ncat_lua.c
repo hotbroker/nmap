@@ -59,6 +59,7 @@
 
 /* $Id$ */
 
+
 #include "ncat.h"
 #include "ncat_lua.h"
 
@@ -88,7 +89,6 @@ static int traceback (lua_State *LL)
     }
     return 1;
 }
-
 void lua_setup(void)
 {
     ncat_assert(o.cmdexec != NULL);
@@ -118,3 +118,4 @@ void lua_run(void)
         exit(EXIT_SUCCESS);
     }
 }
+

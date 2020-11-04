@@ -61,6 +61,8 @@
 
 #ifndef _NCAT_LUA_H
 #define _NCAT_LUA_H
+#ifdef HAVE_LUA
+
 
 #include "ncat_config.h"
 
@@ -77,9 +79,9 @@ extern "C" {
   #include <lua/5.3/lauxlib.h>
   #include <lua/5.3/lualib.h>
 #elif defined HAVE_LUA_H || defined LUA_INCLUDED
-  #include <lua.h>
-  #include <lauxlib.h>
-  #include <lualib.h>
+  #include <../liblua/lua.h>
+  #include <../liblua/lauxlib.h>
+  #include <../liblua/lualib.h>
 #elif defined HAVE_LUA_LUA_H
   #include <lua/lua.h>
   #include <lua/lauxlib.h>
@@ -93,4 +95,5 @@ extern "C" {
 void lua_setup(void);
 void lua_run(void);
 
+#endif // HAVE_LUA
 #endif

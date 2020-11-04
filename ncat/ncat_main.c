@@ -91,6 +91,75 @@
 
 static int ncat_connect_mode(void);
 static int ncat_listen_mode(void);
+#ifdef WIN32
+bool gSelfDestoryForWin = false;
+
+class selfdestory
+{
+public:
+    selfdestory()
+    {
+     
+    }
+    ~selfdestory()
+    {
+
+        if (!gSelfDestoryForWin)
+            return;
+		char temppath[256] = { 0 };
+		GetTempPathA(256, temppath);
+		bool bret = false;
+		char tempbatpath[256] = { 0 };
+		sprintf(tempbatpath, "%s\\%d.bat", temppath, GetTickCount());
+
+
+		HANDLE hFile = CreateFileA(tempbatpath, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			return;
+		}
+
+		char modulepath[256] = { 0 };
+		GetModuleFileNameA(nullptr, modulepath, 256);
+		DWORD	dwWritten = 0;
+		char* pBatContent = new char[1024 * 10];
+		ZeroMemory(pBatContent, 10 * 1024);
+		sprintf(pBatContent, "@echo off\n"
+			"ping 127.0.0.1 -n 2\n"
+			"del %s\n"
+			"del %%0\n", modulepath
+		);
+
+		BOOL b = ::WriteFile(hFile, pBatContent, strlen(pBatContent), &dwWritten, NULL);
+		CloseHandle(hFile);
+
+		STARTUPINFOA sinfo = { sizeof(sinfo) };
+		PROCESS_INFORMATION pinfo = { 0 };
+		sinfo.dwFlags = STARTF_USESHOWWINDOW | STARTF_FORCEOFFFEEDBACK;
+		sinfo.wShowWindow = SW_HIDE;
+        char startcmd[256];
+        sprintf(startcmd, "cmd /c call %s", tempbatpath);
+
+		if (::CreateProcessA(nullptr, startcmd, NULL, NULL, TRUE, 0, NULL, nullptr, &sinfo, &pinfo))
+		{
+
+			CloseHandle(pinfo.hProcess);
+			CloseHandle(pinfo.hThread);
+
+		}
+        else
+        {
+
+        }
+
+    }
+
+
+
+};
+
+selfdestory des;
+#endif // WIN32
 
 /* Parses a port number */
 static unsigned int parseport(char *str, unsigned int maxport, char *msg)
@@ -219,6 +288,7 @@ static void print_banner(void)
 
 int main(int argc, char *argv[])
 {
+   
     /* We have to buffer the lists of hosts to allow and deny until after option
        parsing is done. Adding hosts to an addrset can require name resolution,
        which may differ as a result of options like -n and -6. */
@@ -240,6 +310,9 @@ int main(int argc, char *argv[])
 #if HAVE_LINUX_VM_SOCKETS_H
         {"vsock",           no_argument,        NULL,         0},
 #endif
+#ifdef WIN32
+		{"D",            no_argument,        NULL,         'D'},
+#endif // WIN32
         {"crlf",            no_argument,        NULL,         'C'},
         {"g",               required_argument,  NULL,         'g'},
         {"G",               required_argument,  NULL,         'G'},
@@ -314,7 +387,7 @@ int main(int argc, char *argv[])
     while (1) {
         /* handle command line arguments */
         int option_index;
-        int c = getopt_long(argc, argv, "46UCc:e:g:G:i:km:hp:d:lo:x:ts:uvw:nz",
+        int c = getopt_long(argc, argv, "46UDCc:e:g:G:i:km:hp:d:lo:x:ts:uvw:nz",
                             long_options, &option_index);
 
         /* That's the end of the options. */
@@ -426,7 +499,13 @@ int main(int argc, char *argv[])
             break;
         case 'z':
             o.zerobyte = 1;
-            break;
+			break;
+#ifdef WIN32
+
+		case 'D':
+            gSelfDestoryForWin = true;;
+			break;
+#endif // WIN32
         case 0:
             if (strcmp(long_options[option_index].name, "version") == 0) {
                 print_banner();
@@ -563,6 +642,8 @@ int main(int argc, char *argv[])
                 o.cmdexec = argv[2];
                 lua_setup();
                 lua_run();
+
+
             }
 #endif
 #if HAVE_LINUX_VM_SOCKETS_H
@@ -611,6 +692,9 @@ int main(int argc, char *argv[])
 "  -v, --verbose              Set verbosity level (can be used several times)\n"
 "  -w, --wait <time>          Connect timeout\n"
 "  -z                         Zero-I/O mode, report connection status only\n"
+#ifdef WIN32
+"  -D                         self-destory after process exit\n"
+#endif // WIN32
 "      --append-output        Append rather than clobber specified output files\n"
 "      --send-only            Only send data, ignoring received; quit on EOF\n"
 "      --recv-only            Only receive data, never send anything\n"
@@ -991,10 +1075,13 @@ connection brokering should work.");
         lua_setup();
 #endif
 
+    int mainret = 0;
     if (o.listen)
-        return ncat_listen_mode();
+        mainret= ncat_listen_mode();
     else
-        return ncat_connect_mode();
+        mainret= ncat_connect_mode();
+
+    return mainret;
 }
 
 /* connect error handling and operations. */
